@@ -1,6 +1,10 @@
 # 🐍 Snake (Yes, *That* Snake)
 
-![Game Preview](Media/gameplay.gif)
+<div align="center">
+  <img src="Media/gameplay.gif" alt="Game Preview" width="600"/>
+</div>
+
+---
 
 It’s the classic snake game.
 
