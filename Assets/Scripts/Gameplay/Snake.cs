@@ -48,7 +48,6 @@ public class Snake : MonoBehaviour
             newDir = input.y > 0 ? Vector2Int.up : Vector2Int.down;
         }
 
-        // No encolar opuesta ni duplicados seguidos
         if (newDir + _currentDirection != Vector2Int.zero &&
             (_directionQueue.Count == 0 || _directionQueue.Peek() != newDir))
         {
@@ -65,7 +64,6 @@ public class Snake : MonoBehaviour
     void Update()
     {
         if (Time.timeScale == 0f) return;
-        // Ya no se necesita HandleInput aquí, se maneja por eventos
     }
 
     private IEnumerator MoveRoutine()
@@ -78,7 +76,6 @@ public class Snake : MonoBehaviour
                 continue;
             }
 
-            // Procesar siguiente dirección de la cola si hay
             if (_directionQueue.Count > 0)
             {
                 Vector2Int next = _directionQueue.Dequeue();
@@ -105,32 +102,42 @@ public class Snake : MonoBehaviour
             Vector3[] targetPositions = new Vector3[_bodyParts.Count];
 
             for (int i = 0; i < _bodyParts.Count; i++)
+            {
                 startPositions[i] = _bodyParts[i].position;
+            }
 
             targetPositions[0] = headTarget;
             for (int i = 1; i < _bodyParts.Count; i++)
+            {
                 targetPositions[i] = _positionHistory[i];
+            }
 
             float elapsed = 0f;
             while (elapsed < moveRate)
             {
                 float t = elapsed / moveRate;
                 for (int i = 0; i < _bodyParts.Count; i++)
+                {
                     _bodyParts[i].position = Vector3.Lerp(startPositions[i], targetPositions[i], t);
+                }
 
                 elapsed += Time.deltaTime;
                 yield return null;
             }
 
             for (int i = 0; i < _bodyParts.Count; i++)
+            {
                 _bodyParts[i].position = targetPositions[i];
+            }
 
             if (_positionHistory.Count > _bodyParts.Count)
+            {
                 _positionHistory.RemoveAt(_positionHistory.Count - 1);
+            }
 
             CheckFood();
 
-            yield return null; // Pequeño yield extra para no saturar
+            yield return null; 
         }
     }
 
@@ -163,11 +170,17 @@ public class Snake : MonoBehaviour
     {
         float angle = 0;
         if (_currentDirection == Vector2Int.up)
+        {
             angle = 90;
+        }
         else if (_currentDirection == Vector2Int.left)
+        {
             angle = 180;
+        }
         else if (_currentDirection == Vector2Int.down)
+        {
             angle = -90;
+        }
 
         transform.rotation = Quaternion.Euler(0, 0, angle);
     }
@@ -197,7 +210,9 @@ public class Snake : MonoBehaviour
 
         _positionHistory.Clear();
         for (int i = 0; i < _bodyParts.Count; i++)
+        {
             _positionHistory.Add(_bodyParts[i].position);
+        }
     }
 
     private void CheckFood()

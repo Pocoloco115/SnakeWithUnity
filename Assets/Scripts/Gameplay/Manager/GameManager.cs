@@ -29,10 +29,12 @@ public class GameManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-
-        InitializeGame();
     }
 
+    private void Start()
+    {
+        InitializeGame();
+    }
     private void InitializeGame()
     {
         if (firstLaunch)
