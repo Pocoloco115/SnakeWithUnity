@@ -43,7 +43,7 @@ public class FoodSpawner : MonoBehaviour
             int xIndex = Random.Range(minIndex, maxIndex + 1);
             int yIndex = Random.Range(minIndex, maxIndex + 1);
 
-            spawnPos = new Vector3(xIndex + 0.5f, yIndex + 0.5f, 0);
+            spawnPos = new Vector3(xIndex + 0.25f, yIndex + 0.25f, 0);
 
             safety++;
             if (safety > 200)

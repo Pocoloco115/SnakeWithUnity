@@ -5,7 +5,6 @@ using UnityEngine.InputSystem;
 public class Snake : MonoBehaviour
 {
     [Header("Snake Settings")]
-    [SerializeField] private float moveRate = 0.2f;
     [SerializeField] private int initialSize = 3;
     [SerializeField] private GameObject bodyPrefab;
     [SerializeField] private GameObject curvePrefab;
@@ -18,13 +17,6 @@ public class Snake : MonoBehaviour
     private InputAction _moveAction;
     private Dictionary<Vector3, GameObject> _turnCurves = new Dictionary<Vector3, GameObject>();
 
-    private float moveTimer;
-    private bool isMoving;
-    private Vector3[] startPositions;
-    private Vector3[] targetPositions;
-    private float stepElapsed;
-
-    // Última dirección pendiente
     private Vector2Int _pendingDirection = Vector2Int.zero;
 
     void Awake()
@@ -33,8 +25,15 @@ public class Snake : MonoBehaviour
         _moveAction = _playerInput.actions["Move"];
     }
 
-    void OnEnable() => _moveAction.performed += OnMoveInput;
-    void OnDisable() => _moveAction.performed -= OnMoveInput;
+    void OnEnable()
+    {
+        _moveAction.performed += OnMoveInput;
+    }
+
+    void OnDisable()
+    {
+        _moveAction.performed -= OnMoveInput;
+    }
 
     private void OnMoveInput(InputAction.CallbackContext ctx)
     {
@@ -45,44 +44,28 @@ public class Snake : MonoBehaviour
             ? (input.x > 0 ? Vector2Int.right : Vector2Int.left)
             : (input.y > 0 ? Vector2Int.up : Vector2Int.down);
 
-        // Guardamos la última dirección válida
         if (newDir + _currentDirection != Vector2Int.zero)
+        {
             _pendingDirection = newDir;
+        }
     }
 
     void Start()
     {
         InitializeBody();
         _previousDirection = _currentDirection;
-        moveTimer = moveRate;
     }
 
-    void Update()
+    void FixedUpdate()
     {
         if (Time.timeScale == 0f) return;
-
-        if (!isMoving)
-        {
-            moveTimer -= Time.deltaTime;
-            if (moveTimer <= 0f)
-            {
-                Move();          // inicia el paso
-                stepElapsed = 0f;
-                isMoving = true;
-                moveTimer = moveRate;
-            }
-        }
-        else
-        {
-            InterpolateStep();   // suaviza con Lerp
-        }
+        MoveStep();
     }
 
-    private void Move()
+    private void MoveStep()
     {
         _previousDirection = _currentDirection;
 
-        // Aplicamos la última dirección pendiente
         if (_pendingDirection != Vector2Int.zero && _pendingDirection != -_currentDirection)
         {
             SpawnCurve(transform.position, _previousDirection, _pendingDirection);
@@ -91,7 +74,7 @@ public class Snake : MonoBehaviour
         }
 
         RotateHead();
-        Vector3 headTarget = transform.position + new Vector3(_currentDirection.x, _currentDirection.y, 0f);
+        Vector3 headTarget = transform.position + new Vector3(_currentDirection.x * 0.5f, _currentDirection.y * 0.5f, 0f);
 
         if (IsCollision(headTarget))
         {
@@ -101,40 +84,18 @@ public class Snake : MonoBehaviour
 
         _positionHistory.Insert(0, headTarget);
 
-        startPositions = new Vector3[_bodyParts.Count];
-        targetPositions = new Vector3[_bodyParts.Count];
-
         for (int i = 0; i < _bodyParts.Count; i++)
-            startPositions[i] = _bodyParts[i].position;
-
-        targetPositions[0] = headTarget;
-        for (int i = 1; i < _bodyParts.Count; i++)
-            targetPositions[i] = _positionHistory[i];
-
-        stepElapsed = 0f;
-        isMoving = true;
-    }
-
-    private void InterpolateStep()
-    {
-        stepElapsed += Time.deltaTime;
-        float t = Mathf.Clamp01(stepElapsed / moveRate);
-
-        for (int i = 0; i < _bodyParts.Count; i++)
-            _bodyParts[i].position = Vector3.Lerp(startPositions[i], targetPositions[i], t);
-
-        if (t >= 1f)
         {
-            isMoving = false;
-            for (int i = 0; i < _bodyParts.Count; i++)
-                _bodyParts[i].position = targetPositions[i];
-
-            if (_positionHistory.Count > _bodyParts.Count)
-                _positionHistory.RemoveAt(_positionHistory.Count - 1);
-
-            HandleCurves();
-            CheckFood();
+            _bodyParts[i].position = _positionHistory[i];
         }
+
+        if (_positionHistory.Count > _bodyParts.Count)
+        {
+            _positionHistory.RemoveAt(_positionHistory.Count - 1);
+        }
+
+        HandleCurves();
+        CheckFood();
     }
 
     private void HandleCurves()
@@ -147,12 +108,17 @@ public class Snake : MonoBehaviour
             {
                 if (Vector3.Distance(tailCurrentPos, kvp.Key) < 0.05f)
                 {
-                    if (kvp.Value != null) Destroy(kvp.Value);
+                    if (kvp.Value != null)
+                    {
+                        Destroy(kvp.Value);
+                    }
                     keysToRemove.Add(kvp.Key);
                 }
             }
             foreach (var key in keysToRemove)
+            {
                 _turnCurves.Remove(key);
+            }
         }
     }
 
@@ -165,20 +131,29 @@ public class Snake : MonoBehaviour
     private void GameOver()
     {
         foreach (var curve in _turnCurves.Values)
+        {
             if (curve != null) Destroy(curve);
+        }
         _turnCurves.Clear();
         GameManager.Instance.GameOver();
     }
 
     private bool IsCollision(Vector3 nextPos)
     {
-        if (nextPos.x < -3.5f || nextPos.x > 3.5f ||
-            nextPos.y < -3.5f || nextPos.y > 3.5f)
+        if (nextPos.x < -3.75f || nextPos.x > 3.75f ||
+            nextPos.y < -3.75f || nextPos.y > 3.75f)
+        {
             return true;
+        }
 
         for (int i = 1; i < _bodyParts.Count; i++)
-            if (_bodyParts[i].position == nextPos)
+        {
+            if(_bodyParts[i].position == nextPos)
+            {
                 return true;
+            }
+        }
+            
 
         return false;
     }
@@ -186,9 +161,18 @@ public class Snake : MonoBehaviour
     private void RotateHead()
     {
         float angle = 0;
-        if (_currentDirection == Vector2Int.up) angle = 90;
-        else if (_currentDirection == Vector2Int.left) angle = 180;
-        else if (_currentDirection == Vector2Int.down) angle = -90;
+        if (_currentDirection == Vector2Int.up)
+        {
+            angle = 90;
+        }
+        else if (_currentDirection == Vector2Int.left)
+        {
+            angle = 180;
+        }
+        else if (_currentDirection == Vector2Int.down)
+        {
+            angle = -90;
+        }
         transform.rotation = Quaternion.Euler(0, 0, angle);
     }
 
@@ -209,13 +193,15 @@ public class Snake : MonoBehaviour
         for (int i = 1; i < initialSize; i++)
         {
             Transform segment = Instantiate(bodyPrefab).transform;
-            spawnPos -= new Vector3(_currentDirection.x, _currentDirection.y, 0);
+            spawnPos -= new Vector3(_currentDirection.x * 0.5f, _currentDirection.y * 0.5f, 0);
             segment.position = spawnPos;
             _bodyParts.Add(segment);
         }
         _positionHistory.Clear();
         foreach (var part in _bodyParts)
+        {
             _positionHistory.Add(part.position);
+        }
         _turnCurves.Clear();
     }
 
@@ -235,7 +221,9 @@ public class Snake : MonoBehaviour
     {
         List<Vector3> positions = new List<Vector3>();
         foreach (Transform part in _bodyParts)
+        {
             positions.Add(part.position);
+        }
         return positions;
     }
 }
