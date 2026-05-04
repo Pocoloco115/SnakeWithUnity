@@ -16,7 +16,6 @@ public class Snake : MonoBehaviour
     private PlayerInput _playerInput;
     private InputAction _moveAction;
     private Dictionary<Vector3, GameObject> _turnCurves = new Dictionary<Vector3, GameObject>();
-
     private Vector2Int _pendingDirection = Vector2Int.zero;
 
     void Awake()
@@ -50,6 +49,19 @@ public class Snake : MonoBehaviour
         }
     }
 
+    public void MoveUp() => SetDirection(Vector2Int.up);
+    public void MoveDown() => SetDirection(Vector2Int.down);
+    public void MoveLeft() => SetDirection(Vector2Int.left);
+    public void MoveRight() => SetDirection(Vector2Int.right);
+
+    private void SetDirection(Vector2Int newDir)
+    {
+        if (newDir + _currentDirection != Vector2Int.zero)
+        {
+            _pendingDirection = newDir;
+        }
+    }
+
     void Start()
     {
         InitializeBody();
@@ -74,9 +86,12 @@ public class Snake : MonoBehaviour
         }
 
         RotateHead();
-        Vector3 headTarget = transform.position + new Vector3(_currentDirection.x * 0.5f, _currentDirection.y * 0.5f, 0f);
 
-        if (IsCollision(headTarget))
+        Vector3 headTarget = transform.position + new Vector3(_currentDirection.x * 0.5f, _currentDirection.y * 0.5f, 0f);
+        
+        headTarget = WrapPosition(headTarget);
+
+        if (IsSelfCollision(headTarget))
         {
             GameOver();
             return;
@@ -98,12 +113,36 @@ public class Snake : MonoBehaviour
         CheckFood();
     }
 
+    private Vector3 WrapPosition(Vector3 pos)
+    {
+        if (pos.x < -3.75f) pos.x = 3.75f;
+        else if (pos.x > 3.75f) pos.x = -3.75f;
+
+        if (pos.y < -3.75f) pos.y = 3.75f;
+        else if (pos.y > 3.75f) pos.y = -3.75f;
+
+        return pos;
+    }
+
+    private bool IsSelfCollision(Vector3 nextPos)
+    {
+        for (int i = 1; i < _bodyParts.Count; i++)
+        {
+            if (_bodyParts[i].position == nextPos)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void HandleCurves()
     {
         if (_bodyParts.Count > 0)
         {
             Vector3 tailCurrentPos = _bodyParts[^1].position;
             List<Vector3> keysToRemove = new List<Vector3>();
+
             foreach (var kvp in _turnCurves)
             {
                 if (Vector3.Distance(tailCurrentPos, kvp.Key) < 0.05f)
@@ -115,6 +154,7 @@ public class Snake : MonoBehaviour
                     keysToRemove.Add(kvp.Key);
                 }
             }
+
             foreach (var key in keysToRemove)
             {
                 _turnCurves.Remove(key);
@@ -138,41 +178,16 @@ public class Snake : MonoBehaviour
         GameManager.Instance.GameOver();
     }
 
-    private bool IsCollision(Vector3 nextPos)
-    {
-        if (nextPos.x < -3.75f || nextPos.x > 3.75f ||
-            nextPos.y < -3.75f || nextPos.y > 3.75f)
-        {
-            return true;
-        }
-
-        for (int i = 1; i < _bodyParts.Count; i++)
-        {
-            if(_bodyParts[i].position == nextPos)
-            {
-                return true;
-            }
-        }
-            
-
-        return false;
-    }
-
     private void RotateHead()
     {
         float angle = 0;
         if (_currentDirection == Vector2Int.up)
-        {
             angle = 90;
-        }
         else if (_currentDirection == Vector2Int.left)
-        {
             angle = 180;
-        }
         else if (_currentDirection == Vector2Int.down)
-        {
             angle = -90;
-        }
+
         transform.rotation = Quaternion.Euler(0, 0, angle);
     }
 
@@ -189,6 +204,7 @@ public class Snake : MonoBehaviour
     {
         _bodyParts.Clear();
         _bodyParts.Add(this.transform);
+
         Vector3 spawnPos = transform.position;
         for (int i = 1; i < initialSize; i++)
         {
@@ -197,6 +213,7 @@ public class Snake : MonoBehaviour
             segment.position = spawnPos;
             _bodyParts.Add(segment);
         }
+
         _positionHistory.Clear();
         foreach (var part in _bodyParts)
         {
@@ -209,6 +226,7 @@ public class Snake : MonoBehaviour
     {
         GameObject food = GameObject.FindWithTag("Food");
         if (food == null) return;
+
         if (food.transform.position == transform.position)
         {
             Grow();
